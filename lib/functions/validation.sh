@@ -15,6 +15,7 @@ function ValidateBooleanConfigurationVariables() {
   ValidateBooleanVariable "LOG_WARN" "${LOG_WARN}"
   ValidateBooleanVariable "MULTI_STATUS" "${MULTI_STATUS}"
   ValidateBooleanVariable "RUN_LOCAL" "${RUN_LOCAL}"
+  ValidateBooleanVariable "SAVE_SUPER_LINTER_OUTPUT" "${SAVE_SUPER_LINTER_OUTPUT}"
   ValidateBooleanVariable "SSH_INSECURE_NO_VERIFY_GITHUB_KEY" "${SSH_INSECURE_NO_VERIFY_GITHUB_KEY}"
   ValidateBooleanVariable "SSH_SETUP_GITHUB" "${SSH_SETUP_GITHUB}"
   ValidateBooleanVariable "SUPPRESS_FILE_TYPE_WARN" "${SUPPRESS_FILE_TYPE_WARN}"
@@ -136,6 +137,7 @@ function GetValidationInfo() {
     ANSIBLE_DIRECTORY="${TEMP_ANSIBLE_DIRECTORY}"
     debug "Setting Ansible directory to: ${ANSIBLE_DIRECTORY}"
   fi
+  export ANSIBLE_DIRECTORY
 }
 
 function CheckIfGitBranchExists() {
@@ -259,6 +261,37 @@ function CheckovConfigurationFileContainsDirectoryOption() {
   fi
 }
 export -f CheckovConfigurationFileContainsDirectoryOption
+
+function ValidateGitHubUrls() {
+  if [[ -z "${DEFAULT_GITHUB_DOMAIN:-}" ]]; then
+    error "DEFAULT_GITHUB_DOMAIN is empty."
+    return 1
+  fi
+  debug "Default GitHub domain: ${DEFAULT_GITHUB_DOMAIN}"
+
+  if [[ -z "${GITHUB_DOMAIN:-}" ]]; then
+    error "GITHUB_DOMAIN is empty."
+    return 1
+  fi
+  debug "GitHub domain: ${GITHUB_DOMAIN}"
+
+  if [[ "${GITHUB_DOMAIN}" != "${DEFAULT_GITHUB_DOMAIN}" ]]; then
+    debug "GITHUB_DOMAIN (${GITHUB_DOMAIN}) is not set to the default GitHub domain (${DEFAULT_GITHUB_DOMAIN})"
+
+    if [[ -n "${GITHUB_CUSTOM_API_URL:-}" || -n "${GITHUB_CUSTOM_SERVER_URL:-}" ]]; then
+      error "Cannot set GITHUB_DOMAIN (${GITHUB_DOMAIN}) along with GITHUB_CUSTOM_API_URL (${GITHUB_CUSTOM_API_URL:-}) or with GITHUB_CUSTOM_SERVER_URL (${GITHUB_CUSTOM_SERVER_URL:-})."
+      return 1
+    fi
+  else
+    debug "GITHUB_DOMAIN (${GITHUB_DOMAIN}) is set to the default GitHub domain (${DEFAULT_GITHUB_DOMAIN})"
+
+    if [[ -n "${GITHUB_CUSTOM_API_URL:-}" && -z "${GITHUB_CUSTOM_SERVER_URL:-}" ]] ||
+      [[ -z "${GITHUB_CUSTOM_API_URL:-}" && -n "${GITHUB_CUSTOM_SERVER_URL:-}" ]]; then
+      error "Configure both GITHUB_CUSTOM_API_URL and GITHUB_CUSTOM_SERVER_URL. Current values: GITHUB_CUSTOM_API_URL: ${GITHUB_CUSTOM_API_URL:-}, GITHUB_CUSTOM_SERVER_URL: ${GITHUB_CUSTOM_SERVER_URL:-}"
+      return 1
+    fi
+  fi
+}
 
 function WarnIfVariableIsSet() {
   local INPUT_VARIABLE="${1}"

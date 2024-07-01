@@ -12,10 +12,12 @@ FROM alpine/terragrunt:1.8.4 as terragrunt
 FROM dotenvlinter/dotenv-linter:3.3.0 as dotenv-linter
 FROM ghcr.io/terraform-linters/tflint:v0.51.1 as tflint
 FROM ghcr.io/yannh/kubeconform:v0.6.6 as kubeconfrm
+FROM alpine/helm:3.14.4 as helm
 FROM golang:1.22.3-alpine as golang
 FROM golangci/golangci-lint:v1.59.0 as golangci-lint
 FROM goreleaser/goreleaser:v1.26.2 as goreleaser
 FROM hadolint/hadolint:v2.12.0-alpine as dockerfile-lint
+FROM registry.k8s.io/kustomize/kustomize:v5.0.1 as kustomize
 FROM hashicorp/terraform:1.8.4 as terraform
 FROM koalaman/shellcheck:v0.10.0 as shellcheck
 FROM mstruebing/editorconfig-checker:v3.0.1 as editorconfig-checker
@@ -258,6 +260,13 @@ COPY scripts/install-google-java-format.sh /
 COPY dependencies/google-java-format /google-java-format
 RUN --mount=type=secret,id=GITHUB_TOKEN /install-google-java-format.sh \
     && rm -rfv /install-google-java-format.sh /google-java-format
+
+################
+# Install Helm #
+################
+COPY --from=helm /usr/bin/helm /usr/bin/
+
+COPY --from=kustomize /app/kustomize /usr/bin/
 
 # Copy Node tools
 COPY --from=npm-builder /node_modules /node_modules
